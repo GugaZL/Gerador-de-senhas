@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gerador de Senhas Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-white transition-colors duration-300">
+
+  <div class="flex justify-end p-4">
+    <button onclick="toggleDarkMode()" class="text-xl" title="Alternar tema">
+      <i data-lucide="moon" class="w-6 h-6 dark:hidden"></i>
+      <i data-lucide="sun" class="w-6 h-6 hidden dark:inline"></i>
+    </button>
+  </div>
+
+  <main class="flex flex-col items-center px-4 py-6 space-y-6 max-w-xl mx-auto">
+    <h1 class="text-4xl font-bold text-center">🔒 Gerador de Senhas Pro</h1>
+
+    <!-- Configurações -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md w-full space-y-4">
+      <div>
+        <label class="font-semibold">Tamanho: <span id="tamanhoValor">16</span></label>
+        <input type="range" min="4" max="32" value="16" id="tamanho" class="w-full accent-blue-500">
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <label><input type="checkbox" id="maiusculas" checked> Letras maiúsculas</label>
+        <label><input type="checkbox" id="minusculas" checked> Letras minúsculas</label>
+        <label><input type="checkbox" id="numeros" checked> Números</label>
+        <label><input type="checkbox" id="simbolos" checked> Símbolos (!@#...)</label>
+      </div>
+
+      <button onclick="gerarSenha()" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded-lg text-lg transition">
+        Gerar Senha
+      </button>
+    </div>
+
+    <!-- Resultado -->
+    <div class="w-full bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md space-y-3">
+      <div class="flex items-center justify-between">
+        <code id="senha" class="break-all text-xl font-mono">Sua senha aparecerá aqui</code>
+        <button onclick="copiarSenha()" class="text-blue-500 hover:underline text-sm">Copiar</button>
+      </div>
+
+      <!-- Barra de força -->
+      <div class="w-full h-2 bg-gray-300 dark:bg-gray-700 rounded overflow-hidden">
+        <div id="barraForca" class="h-full bg-red-500 transition-all duration-300 w-0"></div>
+      </div>
+
+      <p class="text-sm italic" id="forcaLabel"></p>
+    </div>
+
+    <!-- Histórico -->
+    <div class="w-full bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md">
+      <h2 class="text-lg font-bold mb-2">Histórico de Senhas</h2>
+      <ul id="historico" class="text-sm space-y-1 max-h-40 overflow-y-auto"></ul>
+    </div>
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    const tamanhoInput = document.getElementById("tamanho");
+    const tamanhoValor = document.getElementById("tamanhoValor");
+    const senhaEl = document.getElementById("senha");
+    const forcaLabel = document.getElementById("forcaLabel");
+    const barraForca = document.getElementById("barraForca");
+    const historicoEl = document.getElementById("historico");
+
+    tamanhoInput.addEventListener("input", () => {
+      tamanhoValor.textContent = tamanhoInput.value;
+    });
+
+    function gerarSenha() {
+      const maiusculas = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const minusculas = "abcdefghijklmnopqrstuvwxyz";
+      const numeros = "0123456789";
+      const simbolos = "!@#$%&*()_+-=[]{}<>?/";
+
+      let chars = "";
+      if (document.getElementById("maiusculas").checked) chars += maiusculas;
+      if (document.getElementById("minusculas").checked) chars += minusculas;
+      if (document.getElementById("numeros").checked) chars += numeros;
+      if (document.getElementById("simbolos").checked) chars += simbolos;
+
+      const tamanho = parseInt(tamanhoInput.value);
+      if (chars.length === 0) {
+        alert("Escolha pelo menos um tipo de caractere.");
+        return;
+      }
+
+      let senha = "";
+      for (let i = 0; i < tamanho; i++) {
+        const rand = Math.floor(Math.random() * chars.length);
+        senha += chars[rand];
+      }
+
+      senhaEl.textContent = senha;
+      avaliarForca(senha);
+      adicionarHistorico(senha);
+    }
+
+    function avaliarForca(s) {
+      let score = 0;
+      if (s.length >= 8) score++;
+      if (/[A-Z]/.test(s)) score++;
+      if (/[a-z]/.test(s)) score++;
+      if (/[0-9]/.test(s)) score++;
+      if (/[^A-Za-z0-9]/.test(s)) score++;
+
+      const cores = ["w-1/5 bg-red-500", "w-2/5 bg-orange-500", "w-3/5 bg-yellow-400", "w-4/5 bg-green-400", "w-full bg-green-600"];
+      const labels = ["Muito fraca", "Fraca", "Média", "Forte", "Muito forte"];
+
+      barraForca.className = `h-full transition-all duration-300 ${cores[Math.min(score - 1, 4)]}`;
+      forcaLabel.textContent = `Força: ${labels[Math.min(score - 1, 4)]}`;
+    }
+
+    function copiarSenha() {
+      navigator.clipboard.writeText(senhaEl.textContent).then(() => {
+        const original = senhaEl.textContent;
+        senhaEl.textContent = "✔️ Copiada!";
+        setTimeout(() => senhaEl.textContent = original, 1000);
+      });
+    }
+
+    function adicionarHistorico(senha) {
+      const item = document.createElement("li");
+      item.textContent = senha;
+      historicoEl.prepend(item);
+      if (historicoEl.childElementCount > 10) historicoEl.removeChild(historicoEl.lastChild);
+    }
+
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle("dark");
+    }
+  </script>
+</body>
+</html>
